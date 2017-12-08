@@ -8,5 +8,5 @@ and distributed at [Dr. Ravindra Duddu's web page][2]
 
 This project will explore the possibility of extending this code to non-local plasticity (and damage?) for tectonic modeling.
 
-[1][https://dx.doi.org/10.1016/j.cma.2016.09.034]
-[2][https://my.vanderbilt.edu/cpml/research/nsf-plr-1341428/]
+[1]: https://dx.doi.org/10.1016/j.cma.2016.09.034
+[2]: https://my.vanderbilt.edu/cpml/research/nsf-plr-1341428/
