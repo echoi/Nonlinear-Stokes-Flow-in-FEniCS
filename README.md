@@ -1,6 +1,6 @@
 # Nonlinear-Stokes-Flow-in-FEniCS
 
-FEniCS code used for
+[FEniCS][3] code used for
 
   S. Jimenez, J.N. Bassis, R. Duddu, “An updated-Lagrangian damage mechanics formulation for modeling the creeping flow and fracture of ice sheets” Computer Methods in Applied Mechanics and Engineering, 313: 406-432, 2017, doi: [10.1016/j.cma.2016.09.034][1]
   
@@ -10,3 +10,4 @@ This project will explore the possibility of extending this code to non-local pl
 
 [1]: https://dx.doi.org/10.1016/j.cma.2016.09.034
 [2]: https://my.vanderbilt.edu/cpml/research/nsf-plr-1341428/
+[3]: https://fenicsproject.org/
