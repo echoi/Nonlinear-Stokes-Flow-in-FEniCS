@@ -142,7 +142,8 @@ mps = np.fmax(lam1, lam2)  # effective max principal stress
 
 # effective Hayhurst stress
 chi = alpha*mps + beta*vms + (1 - alpha - beta)*I1
-chip = np.clip(chi, 0, np.clip)  # positive Hayhurst stress
+#chip = np.clip(chi, 0, np.clip)  # positive Hayhurst stress
+chip = np.clip(chi, 0, None)  # positive Hayhurst stress
 
 # velocity
 u1, u2 = u.split(deepcopy=True)
