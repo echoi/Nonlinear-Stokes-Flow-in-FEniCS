@@ -18,7 +18,8 @@ set_log_active(False)
 
 # output directory
 output_dir = ""
-
+name = "notch"
+mesh_name = "notch"
 
 comm = MPI.COMM_WORLD  # MPI communications
 rank = comm.Get_rank()  # number of current process
@@ -27,10 +28,10 @@ size = comm.Get_size()  # total number of processes
 
 if rank == 0:
     start = time.clock()
-    time_log = open(output_dir + "output/details/time_log.txt", "w")
+    time_log = open(output_dir + "output/details/" + name + "_time_log.txt", "w")
     time_log.close()
     with open(output_dir
-              + "output/details/simulation_log.txt", "w") as sim_log:
+              + "output/details/" + name + "_simulation_log.txt", "w") as sim_log:
         if size == 1:
             sim_log.write("Stokes flow in FEniCS.\nRunning on "
                           "1 processor.\n" + "-"*64 + "\n")
@@ -100,7 +101,7 @@ time_counter = 0  # current time step
 L, H = 500, 125  # domain dimensions
 hs = 0  # water level in crevasse (normalized with crevasse height)
 hw = 0  # water level at terminus (absolute height)
-mesh = load_mesh(output_dir + "mesh/hdf5/notch.h5")
+mesh = load_mesh(output_dir + "mesh/hdf5/" + mesh_name + ".h5")
 nd = mesh.geometry().dim()  # mesh dimensions (2D or 3D)
 
 
@@ -216,7 +217,7 @@ def bodyforce(dmg, y, h=0):
 def pore_pressure(dmg, y, h):
     """Hydraulic pressure from poro-mechanics formulation."""
     pHD = Function(SQ)
-    pHD.vector()[:] = rho_H2O*grav*np.fmax(h - y, 0)*dmg.vector().array()
+    pHD.vector()[:] = rho_H2O*grav*np.fmax(h - y, 0)*dmg.vector().get_local()
     return pHD
 
 
@@ -264,7 +265,7 @@ def surface_crevasse_level(dmg, y):
     """dynamically compute water level in the surface crevasse"""
     cs = 0
     if hs > 0:
-        x2_dmg = y[dmg.vector().array() > Dcr]
+        x2_dmg = y[dmg.vector().get_local() > Dcr]
         if len(x2_dmg) > 0:
             x2_dmg_local_max = min(max(x2_dmg), H)
             x2_dmg_local_min = max(min(x2_dmg), 0)
@@ -348,12 +349,12 @@ while t_elapsed <= t_total:
 
         # compute error norms
         u1k, u2k = uk.split(deepcopy=True)
-        diff1 = u1.vector().array() - u1k.vector().array()
-        diff2 = u2.vector().array() - u2k.vector().array()
-        diffp = p.vector().array() - pk.vector().array()
-        eps1 = np.linalg.norm(diff1)/np.linalg.norm(u1.vector().array())
-        eps2 = np.linalg.norm(diff2)/np.linalg.norm(u2.vector().array())
-        epsp = np.linalg.norm(diffp)/np.linalg.norm(p.vector().array())
+        diff1 = u1.vector().get_local() - u1k.vector().get_local()
+        diff2 = u2.vector().get_local() - u2k.vector().get_local()
+        diffp = p.vector().get_local() - pk.vector().get_local()
+        eps1 = np.linalg.norm(diff1)/np.linalg.norm(u1.vector().get_local())
+        eps2 = np.linalg.norm(diff2)/np.linalg.norm(u2.vector().get_local())
+        epsp = np.linalg.norm(diffp)/np.linalg.norm(p.vector().get_local())
 
         # update solution for next iteration
         assign(uk, u)
@@ -371,7 +372,7 @@ while t_elapsed <= t_total:
         picard_count += 1
 
     if rank == 0:
-        with open(output_dir + "output/details/simulation_log.txt",
+        with open(output_dir + "output/details/" + name + "_simulation_log.txt",
                   "a") as sim_log:
             sim_log.write("\nTime step "
                           "%d: %g hours\n" % (time_counter, t_elapsed))
@@ -387,21 +388,21 @@ while t_elapsed <= t_total:
     # build effective deviatoric stress tensor
     tau = 2*eta(u)*D(u)
     t11 = project(tau[0, 0], SQ,
-                  form_compiler_parameters=form_params).vector().array()
+                  form_compiler_parameters=form_params).vector().get_local()
     t22 = project(tau[1, 1], SQ,
-                  form_compiler_parameters=form_params).vector().array()
+                  form_compiler_parameters=form_params).vector().get_local()
     t33 = np.zeros(nQ_local)
     t12 = project(tau[0, 1], SQ,
-                  form_compiler_parameters=form_params).vector().array()
+                  form_compiler_parameters=form_params).vector().get_local()
 
-    dmg0 = dmg.vector().array()  # damage from previous time step
-    prs = interpolate(p, SQ).vector().array()  # effective pressure
+    dmg0 = dmg.vector().get_local()  # damage from previous time step
+    prs = interpolate(p, SQ).vector().get_local()  # effective pressure
 
     # effective Cauchy stress
     s11, s22, s33, s12 = t11 - prs, t22 - prs, t33 - prs, t12
 
     I1 = s11 + s22 + s33  # effective I1 invariant
-    I1_true = (1 - dmg0)*I1 - 3*pHD.vector().array()  # true I1 invariant
+    I1_true = (1 - dmg0)*I1 - 3*pHD.vector().get_local()  # true I1 invariant
     J2 = 0.5*(t11**2 + t22**2 + t33**2) + t12**2  # effective J2 invariant
     vms = np.sqrt(3*J2)  # effective von Mises stress
 
@@ -452,7 +453,7 @@ while t_elapsed <= t_total:
     solve(LHS == RHS, w, form_compiler_parameters=form_params)
 
     # interpolate nonlocal damage increment at quadrature points
-    wq = np.clip(interpolate(w, SQ).vector().array(), 0, max_Delta_D)
+    wq = np.clip(interpolate(w, SQ).vector().get_local(), 0, max_Delta_D)
 
     # update damage and psi UFL functions
     dmg = Function(SQ)
@@ -478,15 +479,15 @@ while t_elapsed <= t_total:
         if rank == 0:
             print("Generated %d.h5" % time_counter)
             with open(output_dir
-                      + "output/details/time_log.txt", "a") as time_log:
+                      + "output/details/" + name + "_time_log.txt", "a") as time_log:
                 time_log.write("%g, %g\n" % (time_counter, t_elapsed))
 
     """ Updated Lagrangian implementation. """
 
     # split velocity into components in S1 space
     u1, u2 = u.split(deepcopy=True)
-    u1 = interpolate(u1, S1).vector().array()
-    u2 = interpolate(u2, S1).vector().array()
+    u1 = interpolate(u1, S1).vector().get_local()
+    u2 = interpolate(u2, S1).vector().get_local()
 
     # compute the displacement increment vector Delta_u
     Delta_u1 = Function(S1)
@@ -510,7 +511,7 @@ while t_elapsed <= t_total:
 if rank == 0:
     finish = time.clock()
     with open(output_dir
-              + "output/details/simulation_log.txt", "a") as sim_log:
+              + "output/details/" + name + "_simulation_log.txt", "a") as sim_log:
         sim_log.write("-"*64+"\n\n")
         sim_log.write("Start time:             %g\n" % start)
         sim_log.write("Finish time:            %g\n" % finish)

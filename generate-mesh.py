@@ -16,7 +16,7 @@ set_log_active(False)
 
 L, H = 500, 125  # length and height
 nx, ny = 10, 10  # notch width and height
-name = "notch"  # mesh name
+name = "notch_finer"  # mesh name
 
 
 """Generate mesh."""
@@ -35,22 +35,23 @@ for i in range(kx):
         p2 = Point(x+5, y+5)
         domain.set_subdomain(kn, Rectangle(p1, p2))
         kn += 1
-mesh = generate_mesh(domain, 40)
+mesh = generate_mesh(domain, 80)
 
 
 """Refine mesh."""
 
-cc = CellFunction("bool", mesh, False)
-rw = 3*nx
-for cell in cells(mesh):
-    m = cell.midpoint()
-    if (0.8 < m[0]/L < 1) and (0.8 < m[1]/H < 1):
-        cc[cell] = True
-    if (0.9 < m[1]/H) and not (-rw/2 < m[0]-L/2 < rw/2):
-        cc[cell] = True
-mesh = refine(mesh, cc)
+for i in range(0):
+    cc = CellFunction("bool", mesh, False)
+    rw = 3*nx
+    for cell in cells(mesh):
+        m = cell.midpoint()
+        if (0.8 < m[0]/L < 1) and (0.8 < m[1]/H < 1):
+            cc[cell] = True
+        if (0.9 < m[1]/H) and not (-rw/2 < m[0]-L/2 < rw/2):
+            cc[cell] = True
+    mesh = refine(mesh, cc)
 
-for i in range(1):
+for i in range(0):
     cc = CellFunction("bool", mesh, False)
     for cell in cells(mesh):
         h = cell.h()
