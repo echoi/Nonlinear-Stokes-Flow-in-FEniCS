@@ -18,8 +18,8 @@ set_log_active(False)
 
 # output directory
 output_dir = ""
-name = "notch"
-mesh_name = "notch"
+name = "notch_finer"
+mesh_name = "notch_finer"
 
 comm = MPI.COMM_WORLD  # MPI communications
 rank = comm.Get_rank()  # number of current process
@@ -98,7 +98,7 @@ time_counter = 0  # current time step
 
 """Mesh details."""
 
-L, H = 500, 125  # domain dimensions
+L, H, W = 500, 125  # domain dimensions: Length (x1 dimension), height (x2 dim.) and width (x3 dim.)
 hs = 0  # water level in crevasse (normalized with crevasse height)
 hw = 0  # water level at terminus (absolute height)
 mesh = load_mesh(output_dir + "mesh/hdf5/" + mesh_name + ".h5")
@@ -132,15 +132,19 @@ form_params = {"quadrature_degree": deg_quad}
 
 
 """Coordinates of nodes on initial mesh configuration."""
-
-X1, X2 = S1.tabulate_dof_coordinates().reshape((-1, nd)).T  # coordinates
+if nd == 2:
+    X1, X2 = S1.tabulate_dof_coordinates().reshape((-1, nd)).T  # coordinates
+elif nd == 3:
+    X1, X2, X3 = S1.tabulate_dof_coordinates().reshape((-1, nd)).T  # coordinates
 n_local = len(X1)  # number of coordinates on local process
 n_global = S1.dim()  # number of coordinates in global system
 
 
 """Coordinates of quadrature points on initial mesh configuration."""
-
-XQ1, XQ2 = SQ.tabulate_dof_coordinates().reshape((-1, nd)).T  # coordinates
+if nd == 2:
+    XQ1, XQ2 = SQ.tabulate_dof_coordinates().reshape((-1, nd)).T  # coordinates
+elif nd == 3:
+    XQ1, XQ2, XQ3 = SQ.tabulate_dof_coordinates().reshape((-1, nd)).T  # coordinates
 nQ_local = len(XQ1)  # number of quadrature points on local process
 nQ_global = SQ.dim()  # number of quadrature points in global system
 
@@ -149,21 +153,25 @@ class left_edge(SubDomain):
     """Boundary on the left domain edge."""
     def inside(self, x, on_boundary): return near(x[0], 0) and on_boundary
 
-
 class right_edge(SubDomain):
     """Boundary on the right domain edge."""
     def inside(self, x, on_boundary): return near(x[0], L) and on_boundary
-
 
 class bottom_edge(SubDomain):
     """Boundary on the bottom domain edge."""
     def inside(self, x, on_boundary): return near(x[1], 0) and on_boundary
 
-
 class top_edge(SubDomain):
     """Boundary on the top domain edge."""
     def inside(self, x, on_boundary): return near(x[1], H) and on_boundary
 
+class back_edge(SubDomain):
+    """Boundary on the back domain edge."""
+    def inside(self, x, on_boundary): return near(x[2], 0) and on_boundary
+
+class front_edge(SubDomain):
+    """Boundary on the front domain edge."""
+    def inside(self, x, on_boundary): return near(x[2], W) and on_boundary
 
 """ Define boundaries and boundary conditions. """
 
@@ -171,12 +179,18 @@ left = left_edge()
 right = right_edge()
 bottom = bottom_edge()
 top = top_edge()
+if nd == 3:
+    back = back_edge()
+    front = front_edge()
 
 boundaries = FacetFunction("size_t", mesh, 0)
 left.mark(boundaries, 1)
 right.mark(boundaries, 2)
 bottom.mark(boundaries, 3)
 top.mark(boundaries, 4)
+if nd == 3:
+    back.mark(boundaries, 5)
+    front.mark(boundaries, 6)
 ds = Measure("ds", subdomain_data=boundaries)
 
 free_slip_left = DirichletBC(V.sub(0).sub(0), Constant(0), left)
