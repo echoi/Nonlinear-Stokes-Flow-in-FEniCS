@@ -97,13 +97,14 @@ time_counter = 0  # current time step
 
 
 """Mesh details."""
-
-L, H, W = 500, 125  # domain dimensions: Length (x1 dimension), height (x2 dim.) and width (x3 dim.)
 hs = 0  # water level in crevasse (normalized with crevasse height)
 hw = 0  # water level at terminus (absolute height)
 mesh = load_mesh(output_dir + "mesh/hdf5/" + mesh_name + ".h5")
 nd = mesh.geometry().dim()  # mesh dimensions (2D or 3D)
-
+if nd == 3:
+    L, H, W = 500, 125, 300  # domain dimensions: Length (x1 dimension), height (x2 dim.) and width (x3 dim.)
+elif nd == 2:
+    L, H = 500, 125  # domain dimensions: Length (x1 dimension), height (x2 dim.) and width (x3 dim.)
 
 Rxx = 1/2*rho_ice*grav*H - 1/2*rho_H2O*grav*(hw**2)/H  # restrictive stress
 
