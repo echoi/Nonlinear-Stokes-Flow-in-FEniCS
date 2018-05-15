@@ -95,8 +95,8 @@ max_Delta_D = 0.1  # max damage increment
 output_increment = 10  # number of steps between output
 time_counter = 0  # current time step
 
-
 """Mesh details."""
+
 hs = 0  # water level in crevasse (normalized with crevasse height)
 hw = 0  # water level at terminus (absolute height)
 mesh = load_mesh(output_dir + "mesh/hdf5/" + mesh_name + ".h5")
@@ -123,9 +123,11 @@ V = FunctionSpace(mesh, MixedElement([P2, P1]))  # mixed finite element
 """Quadrature elements and function spaces."""
 
 deg_quad = 2
-scalar_quad = FiniteElement("Quadrature", cell=mesh.ufl_cell(),
+scalar_quad = FiniteElement("Quadrature",
+                            cell=mesh.ufl_cell(),
                             degree=deg_quad, quad_scheme="default")
-vector_quad = VectorElement("Quadrature", cell=mesh.ufl_cell(),
+vector_quad = VectorElement("Quadrature", 
+                            cell=mesh.ufl_cell(),
                             degree=deg_quad, quad_scheme="default")
 SQ = FunctionSpace(mesh, scalar_quad)  # quadrature points in scalar space
 VQ = FunctionSpace(mesh, vector_quad)  # quadrature points in vector space
@@ -223,8 +225,8 @@ def bodyforce(dmg, y, h=0):
     by = Function(SQ)  # y-component of vector function
     ice_points = dmg.vector()[:] < Dcr  # ice material points
     H2O_points = (dmg.vector()[:] > Dcr)*(y <= h)  # water material points
-    by.vector()[ice_points] = -rho_ice*grav
-    by.vector()[H2O_points] = -rho_H2O*grav
+    by.vector()[ice_points] = -rho_ice * grav
+    by.vector()[H2O_points] = -rho_H2O * grav
     assign(b.sub(1), by)
     return b
 

@@ -96,15 +96,15 @@ def update(dv, u0, v0, dt):
 
     # Update velocity and nodal coordinates
     # v = dv + v0
-    v_vec = dv_vec + v0_vec
-    u_vec = dt * v_vec
+    v_vec = v0_vec + dv_vec
+    u_vec = u0_vec + dt * v_vec
 
     # Update (u0 <- u0)
     v0.vector()[:] = v_vec
     u0.vector()[:] = u_vec
 
 # External load
-class Traction(UserExpression):
+class Traction(Expression):
 
     def __init__(self, dt, t, old, **kwargs):
         self.t   = t
@@ -187,14 +187,14 @@ def right(x, on_boundary):
 # mesh = Mesh("./dolfin_fine.xml.gz")
 
 # Define function space
-V = VectorFunctionSpace(mesh, "CG", 2)
+V = VectorFunctionSpace(mesh, "CG", 1)
 
 # Test and trial functions
 dv = TrialFunction(V)
 r = TestFunction(V)
 
 E  = 1.0
-nu = 0.0
+nu = 0.3
 mu    = E / (2.0*(1.0 + nu))
 lmbda = E*nu / ((1.0 + nu)*(1.0 - 2.0*nu))
 
@@ -202,9 +202,11 @@ lmbda = E*nu / ((1.0 + nu)*(1.0 - 2.0*nu))
 rho = 1.0
 
 # Time stepping parameters
-dt      = 1.0/32.0
+dt      = 0.1 #1.0/32.0
 t       = 0.0
-T       = 10*dt
+t_counter = 0
+T       = 1000*dt
+output_interval = 10
 
 # Fields from previous time step (displacement, velocity, acceleration)
 u0 = Function(V)
@@ -239,7 +241,7 @@ def sigma(r):
 # - alpha_f*inner(grad(r), sigma(u0))*dx \
 # + inner(r, f)*dx + (1.0-alpha_f)*inner(r, p)*dss(3) + alpha_f*inner(r, p0)*dss(3)
 a = rho * inner(dv, r) * dx
-L =  - dt * inner(grad(r), sigma(v0))*dx \
+L =  - dt * inner(grad(r), sigma(u0))*dx \
 + dt * inner(r, f)*dx + dt * inner(r, p0)*dss(3)
 
 # Set up boundary condition at left end
@@ -254,6 +256,7 @@ vtk_file = File("elasticity.pvd")
 while t <= T:
 
     t += dt
+    t_counter += 1
     print("Time: ", t)
 
     p.t = t
@@ -262,8 +265,10 @@ while t <= T:
     solve(a == L, dv, bc)
     update(dv, u0, v0, dt)
     # Save solution to VTK format
-    vtk_file << v0
+    if t_counter % output_interval == 0:
+        print(t_counter, output_interval)
+        vtk_file << v0
 
 # Plot solution
-plot(v0, mode="displacement")
-plt.show()
+# plot(v0, mode="displacement")
+# plt.show()
