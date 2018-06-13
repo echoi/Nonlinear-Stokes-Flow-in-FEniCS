@@ -167,6 +167,8 @@ time_counter = 0  # current time step
 hs = 0  # water level in crevasse (normalized with crevasse height)
 hw = 0  # water level at terminus (absolute height)
 mesh = load_mesh(output_dir + "mesh/hdf5/" + mesh_name + ".h5")
+mesh = refine(mesh)
+mesh = refine(mesh)
 nd = mesh.geometry().dim()  # mesh dimensions (2D or 3D)
 if nd == 3:
     L, H, W = 500, 125, 300  # domain dimensions: Length (x1 dimension), height (x2 dim.) and width (x3 dim.)
@@ -246,7 +248,7 @@ L =  - dt * inner(grad(r), sigma(u0))*dx \
 
 # Set up boundary condition at left end
 zero = Constant((0.0, 0.0))
-bc = DirichletBC(V, zero, left)
+bc_left = DirichletBC(V, zero, left)
 
 # FIXME: This demo needs some improved commenting
 
@@ -257,12 +259,27 @@ while t <= T:
 
     t += dt
     t_counter += 1
-    print("Time: ", t)
+    #print("Time: ", t)
 
     p.t = t
     p0.t = t
 
-    solve(a == L, dv, bc)
+    bcs = [bc_left]
+
+    A = assemble(a)
+    b = assemble(L)
+    print("b.shape() before BC: {0}\n".format(b.get_local().shape))
+    print("u0.shape(): {0}\n".format(u0.vector().get_local().shape))
+    damped_force_array = b.get_local() - 0.8*np.sign(u0.vector().get_local())*np.abs(b.get_local())
+    b.set_local( damped_force_array )
+    for bc in bcs:
+        bc.apply(A, b)
+    print("b.shape() after BC: {0}\n".format(b.get_local().shape))
+    U = dv.vector()
+    solve(A, U, b)
+          # solver_parameters={'linear_solver': 'gmres'} )
+    #solve(a == L, dv, bc,
+    #      solver_parameters={'linear_solver': 'gmres'} )
     update(dv, u0, v0, dt)
     # Save solution to VTK format
     if t_counter % output_interval == 0:
